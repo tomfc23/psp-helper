@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLB PSP Schedule</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #0a3161;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+        }
+        .header p {
+            margin: 10px 0 0;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .input-section h2 {
+            margin-top: 0;
+        }
+        .output-box {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .button {
+            background-color: #e31937;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #c41230;
+        }
+        .status {
+            font-style: italic;
+            margin-top: 10px;
+            color: #666;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+            margin: 20px 0;
+        }
+        .loading:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        .copy-button {
+            background-color: #4CAF50;
+            margin-top: 10px;
+        }
+        .copy-button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .home-button {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #ffffff;
+            color: #0a3161;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .home-button:hover {
+            background-color: #f0f0f0;
+        }
+        .date-picker {
+            margin-bottom: 20px;
+        }
+        .date-picker input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        @keyframes dots {
+            0%, 20% {
+                color: rgba(0,0,0,0);
+                text-shadow:
+                    .25em 0 0 rgba(0,0,0,0),
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            40% {
+                color: black;
+                text-shadow:
+                    .25em 0 0 rgba(0,0,0,0),
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            60% {
+                text-shadow:
+                    .25em 0 0 black,
+                    .5em 0 0 rgba(0,0,0,0);
+            }
+            80%, 100% {
+                text-shadow:
+                    .25em 0 0 black,
+                    .5em 0 0 black;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="home-button">Home</a>
+        <h1>MLB PSP Schedule</h1>
+        <p>designed by @tomfc on real</p>
+        <p>please dm for bug fixes/suggestions</p>
+    </div>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>MLB Matchups</h2>
+            <div class="date-picker">
+                <label for="gameDate">Select date: </label>
+                <input type="date" id="gameDate">
+            </div>
+          <a href="corsfaqs.html">What is a CORS Proxy?</a> 
+          <a href="https://cors-anywhere.herokuapp.com/">Enable Proxy</a>
+            <div class="loading" id="loading">Fetching MLB schedule data</div>
+            <textarea class="output-box" id="output" readonly placeholder="MLB matchups will appear here in the format: TEAM1 (Pitcher1) vs. TEAM2 (Pitcher2)"></textarea>
+            <div class="button-group">
+                <button class="button" id="fetchButton">Fetch MLB Schedule</button>
+                <button class="button copy-button" id="copyButton">Copy to Clipboard</button>
+            </div>
+            <p class="status" id="status">Click "Fetch MLB Schedule" to get today's matchups.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fetchButton = document.getElementById('fetchButton');
+            const copyButton = document.getElementById('copyButton');
+            const outputArea = document.getElementById('output');
+            const statusText = document.getElementById('status');
+            const loadingIndicator = document.getElementById('loading');
+            const dateInput = document.getElementById('gameDate');
+            
+            // Set default date to today
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            dateInput.value = formattedDate;
+
+            // MLB team abbreviation mapping
+            const teamAbbreviations = {
+                'Arizona Diamondbacks': 'ARI',
+                'Atlanta Braves': 'ATL',
+                'Baltimore Orioles': 'BAL',
+                'Boston Red Sox': 'BOS',
+                'Chicago Cubs': 'CHC',
+                'Chicago White Sox': 'CWS',
+                'Cincinnati Reds': 'CIN',
+                'Cleveland Guardians': 'CLE',
+                'Colorado Rockies': 'COL',
+                'Detroit Tigers': 'DET',
+                'Houston Astros': 'HOU',
+                'Kansas City Royals': 'KC',
+                'Los Angeles Angels': 'LAA',
+                'Los Angeles Dodgers': 'LAD',
+                'Miami Marlins': 'MIA',
+                'Milwaukee Brewers': 'MIL',
+                'Minnesota Twins': 'MIN',
+                'New York Mets': 'NYM',
+                'New York Yankees': 'NYY',
+                'Oakland Athletics': 'OAK',
+                'Philadelphia Phillies': 'PHI',
+                'Pittsburgh Pirates': 'PIT',
+                'San Diego Padres': 'SD',
+                'San Francisco Giants': 'SF',
+                'Seattle Mariners': 'SEA',
+                'St. Louis Cardinals': 'STL',
+                'Tampa Bay Rays': 'TB',
+                'Texas Rangers': 'TEX',
+                'Toronto Blue Jays': 'TOR',
+                'Washington Nationals': 'WSH'
+            };
+
+            // Function to get team abbreviation
+            function getTeamAbbreviation(teamName) {
+                for (const [fullName, abbr] of Object.entries(teamAbbreviations)) {
+                    if (teamName.includes(fullName) || fullName.includes(teamName)) {
+                        return abbr;
+                    }
+                }
+                // If no match found, return first 3 characters
+                return teamName.substring(0, 3).toUpperCase();
+            }
+
+            // Function to fetch and process MLB schedule
+            async function fetchMLBSchedule() {
+                try {
+                    loadingIndicator.style.display = 'block';
+                    statusText.textContent = 'Fetching MLB schedule data...';
+                    outputArea.value = '';
+
+                    const selectedDate = dateInput.value;
+                    const formattedDateForAPI = selectedDate.replace(/-/g, '');
+                    
+                    // We'll use MLB Stats API
+                    const apiUrl = `https://cors-anywhere.herokuapp.com/https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${selectedDate}&hydrate=game(content(summary)),probablePitcher,linescore`;
+                    
+                    const response = await fetch(apiUrl, {
+                        headers: {
+                            'Origin': window.location.origin
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.dates || data.dates.length === 0) {
+                        outputArea.value = "No games scheduled for the selected date.";
+                        statusText.textContent = "No games found for the selected date.";
+                        loadingIndicator.style.display = 'none';
+                        return;
+                    }
+
+                    const games = data.dates[0].games;
+                    
+                    if (!games || games.length === 0) {
+                        outputArea.value = "No games scheduled for the selected date.";
+                        statusText.textContent = "No games found for the selected date.";
+                        loadingIndicator.style.display = 'none';
+                        return;
+                    }
+
+                    // Format the data in the desired format
+                    let formattedOutput = games.map(game => {
+                        const awayTeam = getTeamAbbreviation(game.teams.away.team.name);
+                        const homeTeam = getTeamAbbreviation(game.teams.home.team.name);
+                        
+                        let awayPitcher = "TBD";
+                        let homePitcher = "TBD";
+                        
+                        if (game.teams.away.probablePitcher) {
+                            awayPitcher = game.teams.away.probablePitcher.fullName;
+                        }
+                        
+                        if (game.teams.home.probablePitcher) {
+                            homePitcher = game.teams.home.probablePitcher.fullName;
+                        }
+                        
+                        return `${awayTeam} (${awayPitcher}) vs. ${homeTeam} (${homePitcher})`;
+                    }).join('\n');
+                    
+                    outputArea.value = formattedOutput;
+                    statusText.textContent = `MLB schedule fetched successfully - ${new Date().toLocaleString()}`;
+                    
+                } catch (error) {
+                    console.error('Error fetching MLB schedule:', error);
+                    statusText.innerHTML = `<span class="error">Error fetching MLB schedule: ${error.message}</span>`;
+                    outputArea.value = "Note: If you're seeing a CORS error, you may need to activate the CORS proxy by visiting https://cors-anywhere.herokuapp.com/ and requesting temporary access.";
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                }
+            }
+
+            // Copy to clipboard function
+            function copyToClipboard() {
+                if (!outputArea.value) {
+                    statusText.textContent = 'Nothing to copy. Please fetch the MLB schedule first.';
+                    return;
+                }
+                
+                outputArea.select();
+                document.execCommand('copy');
+                
+                // Deselect the text
+                window.getSelection().removeAllRanges();
+                
+                statusText.textContent = 'Matchups copied to clipboard!';
+                
+                // Reset status message after 3 seconds
+                setTimeout(() => {
+                    statusText.textContent = 'Click "Fetch MLB Schedule" to refresh the data.';
+                }, 3000);
+            }
+
+            // Add event listeners
+            fetchButton.addEventListener('click', fetchMLBSchedule);
+            copyButton.addEventListener('click', copyToClipboard);
+
+            // Optional: Auto-fetch on page load
+            fetchMLBSchedule();
+        });
+    </script>
+</body>
+</html>
