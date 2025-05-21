@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <title>MLB PSP Matchups</title>
+  <style>
+    .loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.loading-indicator.hidden {
+  display: none;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.data-status {
+  margin-top: 10px;
+  font-style: italic;
+  color: #777;
+}
+
+.data-status.updated {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.refresh-btn {
+  margin-top: 10px;
+  background-color: #3498db;
+}
+
+.last-updated {
+  font-style: italic;
+  color: #777;
+  margin-top: 20px;
+  text-align: center;
+}
+    :root {
+      --primary: #0a3161;
+      --secondary: #e81828;
+      --light: #f5f5f5;
+      --dark: #333;
+      --success: #4caf50;
+      --card-bg: #fff;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      background-color: var(--light);
+      color: var(--dark);
+      
+    }
+    
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    
+    h1 {
+      margin-bottom: 0.5rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+    }
+    
+    .input-section {
+      margin-bottom: 2rem;
+    }
+    
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .btn {
+      background-color: var(--secondary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    
+    .btn:hover {
+      background-color: #c41420;
+    }
+    
+    .results-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+      .results-section {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .result-card {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+    }
+    
+    .result-card h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--secondary);
+      padding-bottom: 0.5rem;
+    }
+    
+    .top-pick {
+      color: var(--secondary);
+      font-weight: bold;
+    }
+    
+    .recommendation-list {
+      list-style-type: none;
+    }
+    
+    .recommendation-list li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .recommendation-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .stat-value {
+      float: right;
+      font-weight: bold;
+    }
+    
+    .last-updated {
+      text-align: right;
+      font-style: italic;
+      color: #666;
+      font-size: 0.8rem;
+      margin-top: 2rem;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    #schedulebutton {
+      background-color: #0a3161;
+            color: #ffffff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MLB PSP Matchups</h1>
+    <p>designed by @tomfc on real</p> <br>
+    <p>
+      please dm for bug fixes/suggestions
+    </p>
+  </header>
+  
+  <div class="container">
+    <div class="card input-section">
+      <h2>Enter Today's Matchups</h2> <button id="schedulebutton" onclick="window.location.href='schedule.html'">
+      Schedule
+      </button>
+      <p>Paste the matchups in the format: "TEAM1 (Pitcher1) vs. TEAM2 (Pitcher2)"</p>
+      <textarea id="matchupsInput" placeholder="ARI (Corbin Burnes) vs. CHC (Cody Rea)
+KC (Cole Ragans) vs. DET (Jackson Jobe)
+..."></textarea>
+      <button id="analyzeBtn" class="btn">Analyze Matchups</button>
+    </div>
+    <div id="results" class="hidden">
+      <h2>Analysis Results</h2>
+      <div class="results-section">
+        <div class="result-card">
+          <h3>Top Teams for Strikeouts</h3>
+          <ul id="teamStrikeoutsList" class="recommendation-list"></ul>
+        </div>
+        
+        <div class="result-card">
+          <h3>Top Pitchers by Strikeouts</h3>
+          <ul id="pitcherStrikeoutsList" class="recommendation-list"></ul>
+        </div>
+        
+        <div class="result-card">
+          <h3>Highest ERA Pitchers</h3>
+          <ul id="eraList" class="recommendation-list"></ul>
+        </div>
+        
+        <div class="result-card">
+          <h3>Most Hits Allowed</h3>
+          <ul id="hitsAllowedList" class="recommendation-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
