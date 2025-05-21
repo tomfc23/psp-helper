@@ -1,6 +1,6 @@
 // Wait for both DOM content and data.js to be loaded
 document.addEventListener('DOMContentLoaded', function() {
-  // --- ADDED: Error handling for missing data.js or properties ---
+  // --- Error handling for missing data.js or properties ---
   if (typeof teamData !== 'object' || !teamData.teamStrikeouts) {
     alert('teamData is missing or not loaded. Please check that data.js is present and correctly loaded.');
     return;
@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (match) {
       return [
-        { team: match[1], pitcher: match[2] },
-        { team: match[3], pitcher: match[4] }
+        { team: match[1].trim().toUpperCase(), pitcher: match[2].trim() },
+        { team: match[3].trim().toUpperCase(), pitcher: match[4].trim() }
       ];
     }
 
@@ -55,74 +55,100 @@ document.addEventListener('DOMContentLoaded', function() {
     const eraRecs = [];
     const hitsAllowedRecs = [];
 
+    // Arrays to collect missing keys for debugging
+    const missingTeams = new Set();
+    const missingPitchers = new Set();
+
     // Process each matchup
     matchups.forEach(matchup => {
       const [team1, team2] = matchup;
 
-      // Process team strikeouts - we want opposing pitcher against high strikeout teams
-      if (teamData.teamStrikeouts[team1.team] && team2.pitcher !== "TBD") {
+      // Normalize keys
+      const team1Key = team1.team.trim().toUpperCase();
+      const team2Key = team2.team.trim().toUpperCase();
+      const pitcher1Key = team1.pitcher.trim();
+      const pitcher2Key = team2.pitcher.trim();
+
+      // Process team strikeouts
+      if (teamData.teamStrikeouts[team1Key] && pitcher2Key !== "TBD") {
         teamStrikeoutRecs.push({
-          recommendation: `${team2.pitcher} vs ${teamData.teamMap[team1.team] || team1.team}`,
-          value: teamData.teamStrikeouts[team1.team],
-          sortValue: teamData.teamStrikeouts[team1.team]
+          recommendation: `${pitcher2Key} vs ${teamData.teamMap[team1Key] || team1Key}`,
+          value: teamData.teamStrikeouts[team1Key],
+          sortValue: teamData.teamStrikeouts[team1Key]
         });
+      } else if (!teamData.teamStrikeouts[team1Key]) {
+        missingTeams.add(team1Key);
       }
 
-      if (teamData.teamStrikeouts[team2.team] && team1.pitcher !== "TBD") {
+      if (teamData.teamStrikeouts[team2Key] && pitcher1Key !== "TBD") {
         teamStrikeoutRecs.push({
-          recommendation: `${team1.pitcher} vs ${teamData.teamMap[team2.team] || team2.team}`,
-          value: teamData.teamStrikeouts[team2.team],
-          sortValue: teamData.teamStrikeouts[team2.team]
+          recommendation: `${pitcher1Key} vs ${teamData.teamMap[team2Key] || team2Key}`,
+          value: teamData.teamStrikeouts[team2Key],
+          sortValue: teamData.teamStrikeouts[team2Key]
         });
+      } else if (!teamData.teamStrikeouts[team2Key]) {
+        missingTeams.add(team2Key);
       }
 
       // Process pitcher strikeouts
-      if (pitcherData.strikeouts[team1.pitcher]) {
+      if (pitcherData.strikeouts[pitcher1Key]) {
         pitcherStrikeoutRecs.push({
-          recommendation: `${team1.pitcher} (${team1.team})`,
-          value: pitcherData.strikeouts[team1.pitcher].value,
-          sortValue: pitcherData.strikeouts[team1.pitcher].value
+          recommendation: `${pitcher1Key} (${team1Key})`,
+          value: pitcherData.strikeouts[pitcher1Key].value,
+          sortValue: pitcherData.strikeouts[pitcher1Key].value
         });
+      } else {
+        missingPitchers.add(pitcher1Key);
       }
 
-      if (pitcherData.strikeouts[team2.pitcher]) {
+      if (pitcherData.strikeouts[pitcher2Key]) {
         pitcherStrikeoutRecs.push({
-          recommendation: `${team2.pitcher} (${team2.team})`,
-          value: pitcherData.strikeouts[team2.pitcher].value,
-          sortValue: pitcherData.strikeouts[team2.pitcher].value
+          recommendation: `${pitcher2Key} (${team2Key})`,
+          value: pitcherData.strikeouts[pitcher2Key].value,
+          sortValue: pitcherData.strikeouts[pitcher2Key].value
         });
+      } else {
+        missingPitchers.add(pitcher2Key);
       }
 
       // Process ERA
-      if (pitcherData.era[team1.pitcher]) {
+      if (pitcherData.era[pitcher1Key]) {
         eraRecs.push({
-          recommendation: `${team1.pitcher} (${team1.team})`,
-          value: pitcherData.era[team1.pitcher].value,
-          sortValue: pitcherData.era[team1.pitcher].value
+          recommendation: `${pitcher1Key} (${team1Key})`,
+          value: pitcherData.era[pitcher1Key].value,
+          sortValue: pitcherData.era[pitcher1Key].value
         });
+      } else {
+        missingPitchers.add(pitcher1Key);
       }
-      if (pitcherData.era[team2.pitcher]) {
+      if (pitcherData.era[pitcher2Key]) {
         eraRecs.push({
-          recommendation: `${team2.pitcher} (${team2.team})`,
-          value: pitcherData.era[team2.pitcher].value,
-          sortValue: pitcherData.era[team2.pitcher].value
+          recommendation: `${pitcher2Key} (${team2Key})`,
+          value: pitcherData.era[pitcher2Key].value,
+          sortValue: pitcherData.era[pitcher2Key].value
         });
+      } else {
+        missingPitchers.add(pitcher2Key);
       }
 
       // Process Hits Allowed
-      if (pitcherData.hitsAllowed[team1.pitcher]) {
+      if (pitcherData.hitsAllowed[pitcher1Key]) {
         hitsAllowedRecs.push({
-          recommendation: `Against ${team1.pitcher} (${team1.team})`,
-          value: pitcherData.hitsAllowed[team1.pitcher].value,
-          sortValue: pitcherData.hitsAllowed[team1.pitcher].value
+          recommendation: `Against ${pitcher1Key} (${team1Key})`,
+          value: pitcherData.hitsAllowed[pitcher1Key].value,
+          sortValue: pitcherData.hitsAllowed[pitcher1Key].value
         });
+      } else {
+        missingPitchers.add(pitcher1Key);
       }
-      if (pitcherData.hitsAllowed[team2.pitcher]) {
+      if (pitcherData.hitsAllowed[pitcher2Key]) {
         hitsAllowedRecs.push({
-          recommendation: `Against ${team2.pitcher} (${team2.team})`,
-          value: pitcherData.hitsAllowed[team2.pitcher].value,
-          sortValue: pitcherData.hitsAllowed[team2.pitcher].value
+          recommendation: `Against ${pitcher2Key} (${team2Key})`,
+          value: pitcherData.hitsAllowed[pitcher2Key].value,
+          sortValue: pitcherData.hitsAllowed[pitcher2Key].value
         });
+      } else {
+        missingPitchers.add(pitcher2Key);
       }
     });
 
@@ -132,19 +158,21 @@ document.addEventListener('DOMContentLoaded', function() {
     eraRecs.sort((a, b) => b.sortValue - a.sortValue);
     hitsAllowedRecs.sort((a, b) => b.sortValue - a.sortValue);
 
+    // Attach missing keys for displayRecommendations
     return {
       teamStrikeoutRecs: teamStrikeoutRecs.slice(0, 5),
       pitcherStrikeoutRecs: pitcherStrikeoutRecs.slice(0, 5),
       eraRecs: eraRecs.slice(0, 5),
-      hitsAllowedRecs: hitsAllowedRecs.slice(0, 5)
+      hitsAllowedRecs: hitsAllowedRecs.slice(0, 5),
+      missingTeams: Array.from(missingTeams),
+      missingPitchers: Array.from(missingPitchers)
     };
   }
 
-  // --- IMPROVED: Display recommendations with fallback messages ---
+  // Display recommendations (with missing keys warning)
   function displayRecommendations(results) {
     document.getElementById('results').classList.remove('hidden');
 
-    // Helper to render or show a fallback message
     function renderList(listId, recs, label) {
       const listEl = document.getElementById(listId);
       listEl.innerHTML = '';
@@ -166,13 +194,34 @@ document.addEventListener('DOMContentLoaded', function() {
     renderList('pitcherStrikeoutsList', results.pitcherStrikeoutRecs, 'pitcher strikeout recommendations');
     renderList('eraList', results.eraRecs, 'ERA recommendations');
     renderList('hitsAllowedList', results.hitsAllowedRecs, 'hits allowed recommendations');
+
+    // Show missing teams/pitchers if any
+    let missingInfo = '';
+    if (results.missingTeams.length > 0) {
+      missingInfo += `Missing team(s): ${results.missingTeams.join(', ')}. `;
+    }
+    if (results.missingPitchers.length > 0) {
+      missingInfo += `Missing pitcher(s): ${results.missingPitchers.join(', ')}.`;
+    }
+    if (missingInfo) {
+      let status = document.getElementById('results-missing-info');
+      if (!status) {
+        status = document.createElement('div');
+        status.id = 'results-missing-info';
+        status.style = 'color: red; margin-top:10px;';
+        document.getElementById('results').appendChild(status);
+      }
+      status.textContent = missingInfo;
+    } else {
+      const status = document.getElementById('results-missing-info');
+      if (status) status.textContent = '';
+    }
   }
 
-  // --- IMPROVED: Analyze button event handler with debugging info ---
   document.getElementById('analyzeBtn').addEventListener('click', function() {
     const inputText = document.getElementById('matchupsInput').value;
     const matchups = parseAllMatchups(inputText);
-    console.log('Parsed matchups:', matchups); // For debugging
+    console.log('Parsed matchups:', matchups);
 
     if (matchups.length > 0) {
       const results = analyzeMatchups(matchups);
